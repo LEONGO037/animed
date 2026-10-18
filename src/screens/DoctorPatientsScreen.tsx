@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,13 +6,15 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
-  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
 import { Patient } from '../types';
 import { PatientCard, CARD_HEIGHT } from '../components/PatientCard';
+import { RegisterPatientScreen } from './RegisterPatientScreen';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 
 const MOCK_PATIENTS: Patient[] = [
   {
@@ -50,7 +52,41 @@ const MOCK_PATIENTS: Patient[] = [
 ];
 
 export const DoctorPatientsScreen: React.FC = () => {
-  const [patients] = useState<Patient[]>(MOCK_PATIENTS);
+  const { user, profile } = useAuth();
+  const [patients, setPatients] = useState<Patient[]>(MOCK_PATIENTS);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchPatients = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      setIsRefreshing(true);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'patient')
+        .eq('assigned_doctor_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        const mappedPatients: Patient[] = data.map((p) => ({
+          id: p.id,
+          name: `${p.first_name} ${p.last_name_p} ${p.last_name_m || ''}`.trim(),
+          email: p.email || `${p.username}@animed.app`,
+          statusText: 'Progress',
+        }));
+        setPatients(mappedPatients);
+      }
+    } catch (err: any) {
+      console.warn('Error al cargar pacientes:', err.message);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchPatients();
+  }, [fetchPatients]);
 
   const handlePatientPress = useCallback((patient: Patient) => {
     Alert.alert(
@@ -61,11 +97,7 @@ export const DoctorPatientsScreen: React.FC = () => {
   }, []);
 
   const handleNewPatientPress = useCallback(() => {
-    Alert.alert(
-      'Nuevo Paciente',
-      'Aquí se abrirá el formulario para registrar un nuevo paciente con su usuario y contraseña generados.',
-      [{ text: 'Entendido' }]
-    );
+    setIsRegistering(true);
   }, []);
 
   const renderPatientItem = useCallback(
@@ -101,7 +133,9 @@ export const DoctorPatientsScreen: React.FC = () => {
             accessibilityLabel="Perfil del doctor"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={styles.profileText}>Dr. Profile</Text>
+            <Text style={styles.profileText}>
+              Dr. {profile?.last_name_p ? `${profile.first_name} ${profile.last_name_p}` : 'Profile'}
+            </Text>
             <View style={styles.avatarContainer}>
               <Ionicons name="person" size={16} color={COLORS.PRIMARY_DARK} />
             </View>
@@ -131,8 +165,21 @@ export const DoctorPatientsScreen: React.FC = () => {
         </View>
       </View>
     ),
-    [patients.length, handleNewPatientPress]
+    [patients.length, profile, handleNewPatientPress]
   );
+
+  // Si está en modo de registro, renderizamos la pantalla modular de registro
+  if (isRegistering) {
+    return (
+      <RegisterPatientScreen
+        onSuccess={() => {
+          setIsRegistering(false);
+          fetchPatients();
+        }}
+        onCancel={() => setIsRegistering(false)}
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -148,6 +195,8 @@ export const DoctorPatientsScreen: React.FC = () => {
         removeClippedSubviews={true}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
+        refreshing={isRefreshing}
+        onRefresh={fetchPatients}
       />
     </SafeAreaView>
   );
@@ -174,7 +223,7 @@ const styles = StyleSheet.create({
   brandTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: COLORS.PRIMARY_DARK,
+    color: COLORS.PRIMARY,
     letterSpacing: -0.5,
   },
   profileBadge: {
