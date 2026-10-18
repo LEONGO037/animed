@@ -6,6 +6,7 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -125,7 +126,15 @@ export const DoctorPatientsScreen: React.FC = () => {
       <View style={styles.headerWrapper}>
         {/* Barra superior de marca y perfil del médico */}
         <View style={styles.topBar}>
-          <Text style={styles.brandTitle}>AniMed</Text>
+          <View style={styles.brandContainer}>
+            <Image
+              source={require('../../assets/animed_logo.jpg')}
+              style={styles.brandLogo}
+              resizeMode="contain"
+              accessibilityLabel="Logo AniMed"
+            />
+            <Text style={styles.brandTitle}>AniMed</Text>
+          </View>
           <TouchableOpacity
             style={styles.profileBadge}
             activeOpacity={0.8}
@@ -220,8 +229,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
   },
+  brandContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  brandLogo: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    marginRight: 10,
+  },
   brandTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '800',
     color: COLORS.PRIMARY,
     letterSpacing: -0.5,
