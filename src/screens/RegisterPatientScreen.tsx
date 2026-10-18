@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -24,11 +24,14 @@ interface RegisterPatientScreenProps {
   onCancel?: () => void;
 }
 
+type FormErrors = Partial<Record<'firstName' | 'lastNameP' | 'lastNameM' | 'birthDate' | 'email', string>>;
+
 export const RegisterPatientScreen: React.FC<RegisterPatientScreenProps> = ({
   onSuccess,
   onCancel,
 }) => {
   const { user, profile } = useAuth();
+  const scrollRef = useRef<ScrollView>(null);
 
   const [firstName, setFirstName] = useState('');
   const [lastNameP, setLastNameP] = useState('');
@@ -37,6 +40,16 @@ export const RegisterPatientScreen: React.FC<RegisterPatientScreenProps> = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  const clearError = useCallback((field: keyof FormErrors) => {
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }, []);
 
   // Manejador del cambio de fecha en el selector nativo (onValueChange y onDismiss)
   const handleDateValueChange = useCallback((_event: DateTimePickerChangeEvent, selectedDate?: Date) => {
@@ -45,8 +58,9 @@ export const RegisterPatientScreen: React.FC<RegisterPatientScreenProps> = ({
     }
     if (selectedDate) {
       setBirthDate(selectedDate);
+      clearError('birthDate');
     }
-  }, []);
+  }, [clearError]);
 
   const handleDateDismiss = useCallback(() => {
     setShowDatePicker(false);
@@ -78,26 +92,41 @@ export const RegisterPatientScreen: React.FC<RegisterPatientScreenProps> = ({
     const cleanDob = formatDateForDb(birthDate);
     const cleanEmail = email.trim().toLowerCase();
 
-    // 1. Validaciones de campos obligatorios
+    // 1. Validaciones de campos obligatorios con remarcado en rojo
+    const newErrors: FormErrors = {};
+
     if (!cleanFirst) {
-      Alert.alert('Campo requerido', 'Por favor ingresa el nombre del paciente.');
-      return;
+      newErrors.firstName = 'Ingresa el nombre del paciente.';
     }
     if (!cleanLastP) {
-      Alert.alert('Campo requerido', 'Por favor ingresa el apellido paterno del paciente.');
-      return;
+      newErrors.lastNameP = 'Ingresa el apellido paterno.';
+    }
+    if (!cleanLastM) {
+      newErrors.lastNameM = 'Ingresa el apellido materno.';
+    }
+    if (!birthDate) {
+      newErrors.birthDate = 'Selecciona la fecha de nacimiento.';
     }
     if (!cleanEmail) {
-      Alert.alert('Campo requerido', 'Por favor ingresa el correo electrónico del paciente.');
+      newErrors.email = 'Ingresa el correo electrónico.';
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(cleanEmail)) {
+        newErrors.email = 'Ingresa un correo electrónico válido (ej. paciente@correo.com).';
+      }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      Alert.alert(
+        'Campos requeridos vacíos',
+        'Por favor completa todos los campos marcados en rojo para registrar al paciente.'
+      );
       return;
     }
 
-    // Validación básica de formato de correo
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(cleanEmail)) {
-      Alert.alert('Correo inválido', 'Por favor ingresa un correo electrónico válido (ej. paciente@gmail.com).');
-      return;
-    }
+    setErrors({});
 
     if (!user?.id) {
       Alert.alert('Error de sesión', 'No se detectó un médico autenticado.');
@@ -214,6 +243,7 @@ export const RegisterPatientScreen: React.FC<RegisterPatientScreenProps> = ({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -230,77 +260,138 @@ export const RegisterPatientScreen: React.FC<RegisterPatientScreenProps> = ({
           <View style={styles.formCard}>
             {/* Campo: Nombre(s) */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>
+              <Text style={[styles.label, !!errors.firstName && styles.labelError]}>
                 Nombre(s) <Text style={styles.requiredAsterisk}>*</Text>
               </Text>
-              <View style={styles.inputContainer}>
-                <Ionicons name="person-outline" size={20} color={COLORS.PRIMARY} style={styles.inputIcon} />
+              <View style={[styles.inputContainer, !!errors.firstName && styles.inputContainerError]}>
+                <Ionicons
+                  name="person-outline"
+                  size={20}
+                  color={errors.firstName ? COLORS.ERROR : COLORS.PRIMARY}
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   style={styles.input}
                   placeholder="Ej. Juan Carlos"
                   placeholderTextColor={COLORS.TEXT_MUTED}
                   value={firstName}
-                  onChangeText={setFirstName}
+                  onChangeText={(val) => {
+                    setFirstName(val);
+                    clearError('firstName');
+                  }}
                   autoCapitalize="words"
                   autoCorrect={false}
                 />
               </View>
+              {!!errors.firstName && (
+                <View style={styles.fieldErrorRow}>
+                  <Ionicons name="alert-circle" size={14} color={COLORS.ERROR} style={styles.fieldErrorIcon} />
+                  <Text style={styles.fieldErrorText}>{errors.firstName}</Text>
+                </View>
+              )}
             </View>
 
             {/* Fila: Apellido Paterno & Materno */}
             <View style={styles.row}>
               <View style={styles.col}>
-                <Text style={styles.label}>
+                <Text style={[styles.label, !!errors.lastNameP && styles.labelError]}>
                   Apellido Paterno <Text style={styles.requiredAsterisk}>*</Text>
                 </Text>
-                <View style={styles.inputContainer}>
-                  <Ionicons name="person-outline" size={20} color={COLORS.PRIMARY} style={styles.inputIcon} />
+                <View style={[styles.inputContainer, !!errors.lastNameP && styles.inputContainerError]}>
+                  <Ionicons
+                    name="person-outline"
+                    size={20}
+                    color={errors.lastNameP ? COLORS.ERROR : COLORS.PRIMARY}
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={styles.input}
                     placeholder="Ej. Pérez"
                     placeholderTextColor={COLORS.TEXT_MUTED}
                     value={lastNameP}
-                    onChangeText={setLastNameP}
+                    onChangeText={(val) => {
+                      setLastNameP(val);
+                      clearError('lastNameP');
+                    }}
                     autoCapitalize="words"
                     autoCorrect={false}
                   />
                 </View>
+                {!!errors.lastNameP && (
+                  <View style={styles.fieldErrorRow}>
+                    <Ionicons name="alert-circle" size={14} color={COLORS.ERROR} style={styles.fieldErrorIcon} />
+                    <Text style={styles.fieldErrorText}>{errors.lastNameP}</Text>
+                  </View>
+                )}
               </View>
 
               <View style={styles.col}>
-                <Text style={styles.label}>Apellido Materno</Text>
-                <View style={styles.inputContainer}>
-                  <Ionicons name="person-outline" size={20} color={COLORS.PRIMARY} style={styles.inputIcon} />
+                <Text style={[styles.label, !!errors.lastNameM && styles.labelError]}>
+                  Apellido Materno <Text style={styles.requiredAsterisk}>*</Text>
+                </Text>
+                <View style={[styles.inputContainer, !!errors.lastNameM && styles.inputContainerError]}>
+                  <Ionicons
+                    name="person-outline"
+                    size={20}
+                    color={errors.lastNameM ? COLORS.ERROR : COLORS.PRIMARY}
+                    style={styles.inputIcon}
+                  />
                   <TextInput
                     style={styles.input}
                     placeholder="Ej. Gómez"
                     placeholderTextColor={COLORS.TEXT_MUTED}
                     value={lastNameM}
-                    onChangeText={setLastNameM}
+                    onChangeText={(val) => {
+                      setLastNameM(val);
+                      clearError('lastNameM');
+                    }}
                     autoCapitalize="words"
                     autoCorrect={false}
                   />
                 </View>
+                {!!errors.lastNameM && (
+                  <View style={styles.fieldErrorRow}>
+                    <Ionicons name="alert-circle" size={14} color={COLORS.ERROR} style={styles.fieldErrorIcon} />
+                    <Text style={styles.fieldErrorText}>{errors.lastNameM}</Text>
+                  </View>
+                )}
               </View>
             </View>
 
             {/* Campo: Fecha de Nacimiento con DateTimePicker Nativo */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Fecha de Nacimiento</Text>
+              <Text style={[styles.label, !!errors.birthDate && styles.labelError]}>
+                Fecha de Nacimiento <Text style={styles.requiredAsterisk}>*</Text>
+              </Text>
               <TouchableOpacity
-                style={styles.datePickerButton}
+                style={[styles.datePickerButton, !!errors.birthDate && styles.datePickerButtonError]}
                 onPress={() => setShowDatePicker(true)}
                 activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel="Seleccionar fecha de nacimiento"
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Ionicons name="calendar-outline" size={20} color={COLORS.PRIMARY} style={styles.inputIcon} />
+                <Ionicons
+                  name="calendar-outline"
+                  size={20}
+                  color={errors.birthDate ? COLORS.ERROR : COLORS.PRIMARY}
+                  style={styles.inputIcon}
+                />
                 <Text style={[styles.dateText, !birthDate && styles.placeholderText]}>
                   {formatDateDisplay(birthDate)}
                 </Text>
-                <Ionicons name="chevron-down" size={18} color={COLORS.TEXT_MUTED} />
+                <Ionicons
+                  name="chevron-down"
+                  size={18}
+                  color={errors.birthDate ? COLORS.ERROR : COLORS.TEXT_MUTED}
+                />
               </TouchableOpacity>
+              {!!errors.birthDate && (
+                <View style={styles.fieldErrorRow}>
+                  <Ionicons name="alert-circle" size={14} color={COLORS.ERROR} style={styles.fieldErrorIcon} />
+                  <Text style={styles.fieldErrorText}>{errors.birthDate}</Text>
+                </View>
+              )}
             </View>
 
             {/* DateTimePicker para Android */}
@@ -353,23 +444,37 @@ export const RegisterPatientScreen: React.FC<RegisterPatientScreenProps> = ({
 
             {/* Campo: Correo Electrónico */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>
+              <Text style={[styles.label, !!errors.email && styles.labelError]}>
                 Correo Electrónico <Text style={styles.requiredAsterisk}>*</Text>
               </Text>
-              <View style={styles.inputContainer}>
-                <Ionicons name="mail-outline" size={20} color={COLORS.PRIMARY} style={styles.inputIcon} />
+              <View style={[styles.inputContainer, !!errors.email && styles.inputContainerError]}>
+                <Ionicons
+                  name="mail-outline"
+                  size={20}
+                  color={errors.email ? COLORS.ERROR : COLORS.PRIMARY}
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   style={styles.input}
                   placeholder="paciente@correo.com"
                   placeholderTextColor={COLORS.TEXT_MUTED}
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={(val) => {
+                    setEmail(val);
+                    clearError('email');
+                  }}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
                   textContentType="emailAddress"
                 />
               </View>
+              {!!errors.email && (
+                <View style={styles.fieldErrorRow}>
+                  <Ionicons name="alert-circle" size={14} color={COLORS.ERROR} style={styles.fieldErrorIcon} />
+                  <Text style={styles.fieldErrorText}>{errors.email}</Text>
+                </View>
+              )}
             </View>
 
             {/* Aviso sobre credenciales automáticas */}
@@ -498,8 +603,11 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     marginLeft: 2,
   },
+  labelError: {
+    color: COLORS.ERROR,
+  },
   requiredAsterisk: {
-    color: '#DC2626',
+    color: COLORS.ERROR,
     fontWeight: '700',
   },
   inputContainer: {
@@ -512,6 +620,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     minHeight: 48,
   },
+  inputContainerError: {
+    borderColor: COLORS.ERROR_BORDER,
+    backgroundColor: COLORS.ERROR_LIGHT,
+    borderWidth: 1.5,
+  },
   datePickerButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -522,6 +635,26 @@ const styles = StyleSheet.create({
     borderColor: COLORS.BORDER,
     paddingHorizontal: 12,
     minHeight: 48,
+  },
+  datePickerButtonError: {
+    borderColor: COLORS.ERROR_BORDER,
+    backgroundColor: COLORS.ERROR_LIGHT,
+    borderWidth: 1.5,
+  },
+  fieldErrorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    marginLeft: 2,
+  },
+  fieldErrorIcon: {
+    marginRight: 4,
+  },
+  fieldErrorText: {
+    fontSize: 12,
+    color: COLORS.ERROR,
+    fontWeight: '500',
+    flex: 1,
   },
   inputIcon: {
     marginRight: 10,

@@ -10,4 +10,7 @@ export const COLORS = {
   BADGE_TEXT: '#2973B4',
   BORDER: '#E5E7EB',
   WHITE: '#FFFFFF',
+  ERROR: '#DC2626',
+  ERROR_LIGHT: '#FEF2F2',
+  ERROR_BORDER: '#EF4444',
 } as const;
