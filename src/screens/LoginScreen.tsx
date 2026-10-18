@@ -10,14 +10,21 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 
+const { width: screenWidth } = Dimensions.get('window');
+const WAVE_HEIGHT = 250;
+
 export const LoginScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const { signIn } = useAuth();
+
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,8 +48,10 @@ export const LoginScreen: React.FC = () => {
     }
   }, [username, password, signIn]);
 
+  const totalWaveHeight = WAVE_HEIGHT + insets.top;
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.screenContainer}>
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -51,28 +60,69 @@ export const LoginScreen: React.FC = () => {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          bounces={false}
         >
-          {/* Header de Marca AniMed */}
-          <View style={styles.brandContainer}>
-            <View style={styles.logoBadge}>
-              <Ionicons name="medical" size={32} color={COLORS.SURFACE} />
+          {/* Cabecera Tipo OLA (Wave Header con SVG) */}
+          <View style={[styles.waveContainer, { height: totalWaveHeight }]}>
+            <Svg
+              width={screenWidth}
+              height={totalWaveHeight}
+              viewBox={`0 0 ${screenWidth} ${totalWaveHeight}`}
+              style={styles.svgAbsolute}
+            >
+              <Defs>
+                <LinearGradient id="waveGradientMain" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <Stop offset="0%" stopColor="#14B8A6" />
+                  <Stop offset="100%" stopColor={COLORS.PRIMARY_DARK} />
+                </LinearGradient>
+                <LinearGradient id="waveGradientSecondary" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <Stop offset="0%" stopColor="#2DD4BF" stopOpacity={0.4} />
+                  <Stop offset="100%" stopColor={COLORS.PRIMARY} stopOpacity={0.2} />
+                </LinearGradient>
+              </Defs>
+
+              {/* Ola secundaria suave de fondo para profundidad visual */}
+              <Path
+                d={`M0 0 L${screenWidth} 0 L${screenWidth} ${totalWaveHeight - 25} C${screenWidth * 0.72} ${totalWaveHeight + 25}, ${screenWidth * 0.3} ${totalWaveHeight - 65}, 0 ${totalWaveHeight - 15} Z`}
+                fill="url(#waveGradientSecondary)"
+              />
+
+              {/* Ola principal frontal */}
+              <Path
+                d={`M0 0 L${screenWidth} 0 L${screenWidth} ${totalWaveHeight - 55} C${screenWidth * 0.68} ${totalWaveHeight + 10}, ${screenWidth * 0.35} ${totalWaveHeight - 45}, 0 ${totalWaveHeight - 20} Z`}
+                fill="url(#waveGradientMain)"
+              />
+            </Svg>
+
+            {/* Contenido dentro del Wave Hero */}
+            <View style={[styles.heroContent, { paddingTop: insets.top + 16 }]}>
+              <View style={styles.brandBadge}>
+                <Ionicons name="medical" size={26} color={COLORS.PRIMARY_DARK} />
+              </View>
+              <Text style={styles.brandTitle}>AniMed</Text>
+              <Text style={styles.brandSubtitle}>Control Tirzepatida & Seguimiento</Text>
             </View>
-            <Text style={styles.brandTitle}>AniMed</Text>
-            <Text style={styles.brandSubtitle}>Control Tirzepatida & Seguimiento Clínico</Text>
           </View>
 
-          {/* Formulario de Acceso */}
-          <View style={styles.card}>
-            <Text style={styles.formTitle}>Iniciar Sesión</Text>
-            <Text style={styles.formSubtitle}>
-              Ingresa con tu cuenta de Médico o Paciente asignado.
-            </Text>
+          {/* Formulario Fluido y Orgánico (Sin bloques cuadrados pesados) */}
+          <View style={styles.formContainer}>
+            <View style={styles.titleGroup}>
+              <Text style={styles.welcomeTitle}>Bienvenido</Text>
+              <Text style={styles.welcomeSubtitle}>
+                Inicia sesión con tu cuenta de Médico o Paciente
+              </Text>
+            </View>
 
             {/* Input Usuario */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Usuario o Correo</Text>
-              <View style={styles.inputContainer}>
-                <Ionicons name="person-outline" size={20} color={COLORS.TEXT_MUTED} style={styles.inputIcon} />
+              <View style={styles.inputWrapper}>
+                <Ionicons
+                  name="person-outline"
+                  size={20}
+                  color={COLORS.PRIMARY}
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   style={styles.input}
                   placeholder="Ej. juanp o correo@animed.app"
@@ -89,11 +139,16 @@ export const LoginScreen: React.FC = () => {
             {/* Input Contraseña */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Contraseña</Text>
-              <View style={styles.inputContainer}>
-                <Ionicons name="lock-closed-outline" size={20} color={COLORS.TEXT_MUTED} style={styles.inputIcon} />
+              <View style={styles.inputWrapper}>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={20}
+                  color={COLORS.PRIMARY}
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   style={styles.input}
-                  placeholder="Contraseña"
+                  placeholder="Tu contraseña"
                   placeholderTextColor={COLORS.TEXT_MUTED}
                   value={password}
                   onChangeText={setPassword}
@@ -116,7 +171,7 @@ export const LoginScreen: React.FC = () => {
               </View>
             </View>
 
-            {/* Botón Principal */}
+            {/* Botón Principal Estilo Pill con Sombra Suave */}
             <TouchableOpacity
               style={[styles.primaryButton, isSubmitting && styles.buttonDisabled]}
               onPress={handleLogin}
@@ -128,32 +183,35 @@ export const LoginScreen: React.FC = () => {
               {isSubmitting ? (
                 <ActivityIndicator color={COLORS.SURFACE} />
               ) : (
-                <Text style={styles.primaryButtonText}>Entrar</Text>
+                <View style={styles.buttonContent}>
+                  <Text style={styles.primaryButtonText}>Ingresar al Sistema</Text>
+                  <Ionicons name="arrow-forward" size={18} color={COLORS.SURFACE} style={styles.buttonArrow} />
+                </View>
               )}
             </TouchableOpacity>
 
-            {/* Tarjeta de Información de Acceso */}
-            <View style={styles.hintBox}>
-              <View style={styles.hintHeader}>
-                <Ionicons name="information-circle-outline" size={16} color={COLORS.PRIMARY_DARK} />
-                <Text style={styles.hintTitle}>Formato de acceso clínico:</Text>
+            {/* Tarjeta Curvada de Información de Acceso */}
+            <View style={styles.infoPill}>
+              <View style={styles.infoPillHeader}>
+                <Ionicons name="information-circle" size={18} color={COLORS.PRIMARY} />
+                <Text style={styles.infoPillTitle}>Formato de Credenciales</Text>
               </View>
-              <Text style={styles.hintText}>
-                • <Text style={styles.hintBold}>Usuario:</Text> Nombre + Inicial del apellido paterno (ej. <Text style={styles.hintCode}>juanp</Text>).
+              <Text style={styles.infoPillText}>
+                • <Text style={styles.infoBold}>Usuario:</Text> Nombre + Inicial del apellido paterno (ej. <Text style={styles.infoCode}>juanp</Text>).
               </Text>
-              <Text style={styles.hintText}>
-                • <Text style={styles.hintBold}>Contraseña inicial:</Text> <Text style={styles.hintCode}>AniMed2022!</Text>
+              <Text style={styles.infoPillText}>
+                • <Text style={styles.infoBold}>Contraseña inicial:</Text> <Text style={styles.infoCode}>AniMed2022!</Text>
               </Text>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
+  screenContainer: {
     flex: 1,
     backgroundColor: COLORS.BACKGROUND,
   },
@@ -161,91 +219,104 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 40,
+  },
+  waveContainer: {
+    width: screenWidth,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  svgAbsolute: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  heroContent: {
+    alignItems: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 32,
-    justifyContent: 'center',
-    minHeight: '100%',
   },
-  brandContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  logoBadge: {
-    width: 68,
-    height: 68,
-    borderRadius: 22,
-    backgroundColor: COLORS.PRIMARY,
+  brandBadge: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: COLORS.PRIMARY_DARK,
+    marginBottom: 10,
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
   },
   brandTitle: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: '800',
-    color: COLORS.PRIMARY_DARK,
+    color: '#FFFFFF',
     letterSpacing: -0.5,
   },
   brandSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: 2,
+    fontWeight: '500',
+    letterSpacing: 0.2,
+  },
+  formContainer: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 8,
+  },
+  titleGroup: {
+    marginBottom: 24,
+  },
+  welcomeTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: COLORS.TEXT_MAIN,
+    letterSpacing: -0.4,
+  },
+  welcomeSubtitle: {
     fontSize: 14,
     color: COLORS.TEXT_MUTED,
     marginTop: 4,
-    textAlign: 'center',
-  },
-  card: {
-    backgroundColor: COLORS.SURFACE,
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  formTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.TEXT_MAIN,
-    marginBottom: 4,
-  },
-  formSubtitle: {
-    fontSize: 13,
-    color: COLORS.TEXT_MUTED,
-    marginBottom: 20,
+    lineHeight: 20,
   },
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: 18,
   },
   label: {
     fontSize: 13,
     fontWeight: '600',
     color: COLORS.TEXT_MAIN,
-    marginBottom: 6,
+    marginBottom: 8,
+    marginLeft: 4,
   },
-  inputContainer: {
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
+    backgroundColor: COLORS.SURFACE,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    minHeight: 52,
     borderWidth: 1,
-    borderColor: COLORS.BORDER,
-    paddingHorizontal: 12,
-    minHeight: 48,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
   },
   inputIcon: {
-    marginRight: 8,
+    marginRight: 12,
   },
   input: {
     flex: 1,
     fontSize: 15,
     color: COLORS.TEXT_MAIN,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   eyeButton: {
     padding: 6,
@@ -254,56 +325,64 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: COLORS.PRIMARY,
-    borderRadius: 12,
-    minHeight: 50,
+    borderRadius: 26,
+    minHeight: 52,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 10,
     shadowColor: COLORS.PRIMARY_DARK,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 4,
   },
   buttonDisabled: {
     opacity: 0.65,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   primaryButtonText: {
     color: COLORS.SURFACE,
     fontSize: 16,
     fontWeight: '700',
-    letterSpacing: 0.2,
+    letterSpacing: 0.3,
   },
-  hintBox: {
-    marginTop: 20,
+  buttonArrow: {
+    marginLeft: 8,
+  },
+  infoPill: {
+    marginTop: 24,
     backgroundColor: '#F0FDFA',
-    borderRadius: 12,
-    padding: 14,
+    borderRadius: 18,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#CCFBF1',
   },
-  hintHeader: {
+  infoPillHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
   },
-  hintTitle: {
-    fontSize: 12,
+  infoPillTitle: {
+    fontSize: 13,
     fontWeight: '700',
     color: COLORS.PRIMARY_DARK,
     marginLeft: 6,
   },
-  hintText: {
+  infoPillText: {
     fontSize: 12,
     color: COLORS.TEXT_MUTED,
     lineHeight: 18,
     marginTop: 2,
   },
-  hintBold: {
+  infoBold: {
     fontWeight: '600',
     color: COLORS.TEXT_MAIN,
   },
-  hintCode: {
+  infoCode: {
     fontWeight: '700',
     color: COLORS.PRIMARY_DARK,
   },
