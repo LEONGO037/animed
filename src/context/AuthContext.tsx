@@ -1,0 +1,169 @@
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { Session, User } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
+import { UserProfile, UserRole } from '../types';
+
+interface AuthContextType {
+  session: Session | null;
+  user: User | null;
+  profile: UserProfile | null;
+  role: UserRole | null;
+  isLoading: boolean;
+  signIn: (usernameOrEmail: string, password: string) => Promise<{ error?: string }>;
+  signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [role, setRole] = useState<UserRole | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  const fetchProfile = useCallback(async (userId: string, currentUser?: User) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (data) {
+        setProfile(data as UserProfile);
+        setRole(data.role as UserRole);
+        return;
+      }
+
+      // Si no existe perfil en la tabla, verificar metadata de autenticación
+      const metaRole = (currentUser?.user_metadata?.role as UserRole) || 'patient';
+      setRole(metaRole);
+      setProfile({
+        id: userId,
+        role: metaRole,
+        username: currentUser?.user_metadata?.username || currentUser?.email?.split('@')[0] || 'usuario',
+        first_name: currentUser?.user_metadata?.first_name || 'Usuario',
+        last_name_p: currentUser?.user_metadata?.last_name_p || '',
+      });
+    } catch (err: any) {
+      console.warn('Error al obtener perfil:', err.message);
+      setRole('patient');
+    }
+  }, []);
+
+  const refreshProfile = useCallback(async () => {
+    if (user) {
+      await fetchProfile(user.id, user);
+    }
+  }, [user, fetchProfile]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    // 1. Obtener sesión activa inicial
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      if (!mounted) return;
+      setSession(initialSession);
+      setUser(initialSession?.user ?? null);
+
+      if (initialSession?.user) {
+        fetchProfile(initialSession.user.id, initialSession.user).finally(() => {
+          if (mounted) setIsLoading(false);
+        });
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    // 2. Suscribirse a cambios de estado de autenticación
+    const { data: authSubscription } = supabase.auth.onAuthStateChange(
+      async (_event, currentSession) => {
+        if (!mounted) return;
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+
+        if (currentSession?.user) {
+          await fetchProfile(currentSession.user.id, currentSession.user);
+        } else {
+          setProfile(null);
+          setRole(null);
+        }
+        setIsLoading(false);
+      }
+    );
+
+    return () => {
+      mounted = false;
+      authSubscription.subscription.unsubscribe();
+    };
+  }, [fetchProfile]);
+
+  const signIn = useCallback(async (usernameOrEmail: string, password: string) => {
+    const cleanInput = usernameOrEmail.trim().toLowerCase();
+    if (!cleanInput || !password) {
+      return { error: 'Por favor ingresa usuario y contraseña.' };
+    }
+
+    // Si el usuario no ingresó un correo con @, agregamos el dominio corporativo @animed.app
+    const email = cleanInput.includes('@') ? cleanInput : `${cleanInput}@animed.app`;
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        return { error: error.message };
+      }
+
+      if (data.user) {
+        await fetchProfile(data.user.id, data.user);
+      }
+
+      return {};
+    } catch (err: any) {
+      return { error: err.message || 'Error inesperado al conectar.' };
+    }
+  }, [fetchProfile]);
+
+  const signOut = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      await supabase.auth.signOut();
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setRole(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  return (
+    <AuthContext.Provider
+      value={{
+        session,
+        user,
+        profile,
+        role,
+        isLoading,
+        signIn,
+        signOut,
+        refreshProfile,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = (): AuthContextType => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth debe ser utilizado dentro de un AuthProvider');
+  }
+  return context;
+};
