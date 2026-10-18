@@ -189,20 +189,6 @@ export const LoginScreen: React.FC = () => {
                 </View>
               )}
             </TouchableOpacity>
-
-            {/* Tarjeta Curvada de Información de Acceso */}
-            <View style={styles.infoPill}>
-              <View style={styles.infoPillHeader}>
-                <Ionicons name="information-circle" size={18} color={COLORS.PRIMARY} />
-                <Text style={styles.infoPillTitle}>Formato de Credenciales</Text>
-              </View>
-              <Text style={styles.infoPillText}>
-                • <Text style={styles.infoBold}>Usuario:</Text> Nombre + Inicial del apellido paterno (ej. <Text style={styles.infoCode}>juanp</Text>).
-              </Text>
-              <Text style={styles.infoPillText}>
-                • <Text style={styles.infoBold}>Contraseña inicial:</Text> <Text style={styles.infoCode}>AniMed2022!</Text>
-              </Text>
-            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -352,38 +338,5 @@ const styles = StyleSheet.create({
   },
   buttonArrow: {
     marginLeft: 8,
-  },
-  infoPill: {
-    marginTop: 24,
-    backgroundColor: '#F0FDFA',
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#CCFBF1',
-  },
-  infoPillHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  infoPillTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.PRIMARY_DARK,
-    marginLeft: 6,
-  },
-  infoPillText: {
-    fontSize: 12,
-    color: COLORS.TEXT_MUTED,
-    lineHeight: 18,
-    marginTop: 2,
-  },
-  infoBold: {
-    fontWeight: '600',
-    color: COLORS.TEXT_MAIN,
-  },
-  infoCode: {
-    fontWeight: '700',
-    color: COLORS.PRIMARY_DARK,
   },
 });

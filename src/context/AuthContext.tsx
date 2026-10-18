@@ -106,8 +106,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { error: 'Por favor ingresa usuario y contraseña.' };
     }
 
-    // Si el usuario no ingresó un correo con @, agregamos el dominio corporativo @animed.app
-    const email = cleanInput.includes('@') ? cleanInput : `${cleanInput}@animed.app`;
+    // Si el usuario no ingresó un correo con @, mapeamos o agregamos @animed.app
+    let email = cleanInput;
+    if (!cleanInput.includes('@')) {
+      if (cleanInput === 'marceloa') {
+        email = 'anibarro30@gmail.com';
+      } else {
+        email = `${cleanInput}@animed.app`;
+      }
+    }
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
