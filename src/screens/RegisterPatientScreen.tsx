@@ -10,9 +10,11 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { COLORS } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import { supabase, createIsolatedAuthClient } from '../lib/supabase';
@@ -31,24 +33,45 @@ export const RegisterPatientScreen: React.FC<RegisterPatientScreenProps> = ({
   const [firstName, setFirstName] = useState('');
   const [lastNameP, setLastNameP] = useState('');
   const [lastNameM, setLastNameM] = useState('');
-  const [dob, setDob] = useState('');
+  const [birthDate, setBirthDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Formateador simple de fecha AAAA-MM-DD conforme escribe el usuario
-  const handleDobChange = (text: string) => {
-    // Permite dígitos y guiones
-    const cleaned = text.replace(/[^0-9-]/g, '');
-    if (cleaned.length <= 10) {
-      setDob(cleaned);
+  // Manejador del cambio de fecha en el selector nativo
+  const handleDateChange = useCallback((event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
     }
+    if (event.type === 'set' && selectedDate) {
+      setBirthDate(selectedDate);
+    }
+  }, []);
+
+  // Formateador para visualización en español amigable
+  const formatDateDisplay = (date: Date | null): string => {
+    if (!date) return 'Seleccionar fecha de nacimiento';
+    return date.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
+  };
+
+  // Formateador seguro YYYY-MM-DD para la base de datos sin desfase horario
+  const formatDateForDb = (date: Date | null): string | null => {
+    if (!date) return null;
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const handleRegister = useCallback(async () => {
     const cleanFirst = firstName.trim();
     const cleanLastP = lastNameP.trim();
     const cleanLastM = lastNameM.trim();
-    const cleanDob = dob.trim();
+    const cleanDob = formatDateForDb(birthDate);
     const cleanEmail = email.trim().toLowerCase();
 
     // 1. Validaciones de campos obligatorios
@@ -144,7 +167,7 @@ export const RegisterPatientScreen: React.FC<RegisterPatientScreenProps> = ({
               setFirstName('');
               setLastNameP('');
               setLastNameM('');
-              setDob('');
+              setBirthDate(null);
               setEmail('');
               if (onSuccess) {
                 onSuccess();
@@ -158,7 +181,7 @@ export const RegisterPatientScreen: React.FC<RegisterPatientScreenProps> = ({
     } finally {
       setIsSubmitting(false);
     }
-  }, [firstName, lastNameP, lastNameM, dob, email, user?.id, onSuccess]);
+  }, [firstName, lastNameP, lastNameM, birthDate, email, user?.id, onSuccess]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -257,24 +280,70 @@ export const RegisterPatientScreen: React.FC<RegisterPatientScreenProps> = ({
               </View>
             </View>
 
-            {/* Campo: Fecha de Nacimiento */}
+            {/* Campo: Fecha de Nacimiento con DateTimePicker Nativo */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Fecha de Nacimiento</Text>
-              <View style={styles.inputContainer}>
+              <TouchableOpacity
+                style={styles.datePickerButton}
+                onPress={() => setShowDatePicker(true)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Seleccionar fecha de nacimiento"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
                 <Ionicons name="calendar-outline" size={20} color={COLORS.PRIMARY} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="AAAA-MM-DD (Ej. 1990-06-15)"
-                  placeholderTextColor={COLORS.TEXT_MUTED}
-                  value={dob}
-                  onChangeText={handleDobChange}
-                  keyboardType="numbers-and-punctuation"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  maxLength={10}
-                />
-              </View>
+                <Text style={[styles.dateText, !birthDate && styles.placeholderText]}>
+                  {formatDateDisplay(birthDate)}
+                </Text>
+                <Ionicons name="chevron-down" size={18} color={COLORS.TEXT_MUTED} />
+              </TouchableOpacity>
             </View>
+
+            {/* DateTimePicker para Android */}
+            {showDatePicker && Platform.OS === 'android' && (
+              <DateTimePicker
+                value={birthDate || new Date(1995, 0, 1)}
+                mode="date"
+                display="default"
+                maximumDate={new Date()}
+                onChange={handleDateChange}
+              />
+            )}
+
+            {/* Modal DateTimePicker para iOS */}
+            {Platform.OS === 'ios' && (
+              <Modal
+                visible={showDatePicker}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowDatePicker(false)}
+              >
+                <View style={styles.modalBackdrop}>
+                  <View style={styles.iosPickerContainer}>
+                    <View style={styles.iosPickerHeader}>
+                      <Text style={styles.iosPickerTitle}>Fecha de Nacimiento</Text>
+                      <TouchableOpacity
+                        onPress={() => setShowDatePicker(false)}
+                        style={styles.iosDoneButton}
+                        accessibilityRole="button"
+                        accessibilityLabel="Confirmar fecha"
+                      >
+                        <Text style={styles.iosDoneButtonText}>Listo</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <DateTimePicker
+                      value={birthDate || new Date(1995, 0, 1)}
+                      mode="date"
+                      display="spinner"
+                      maximumDate={new Date()}
+                      textColor={COLORS.TEXT_MAIN}
+                      onChange={handleDateChange}
+                      locale="es-ES"
+                    />
+                  </View>
+                </View>
+              </Modal>
+            )}
 
             {/* Campo: Correo Electrónico */}
             <View style={styles.inputGroup}>
@@ -437,6 +506,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     minHeight: 48,
   },
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.BORDER,
+    paddingHorizontal: 12,
+    minHeight: 48,
+  },
   inputIcon: {
     marginRight: 10,
   },
@@ -445,6 +525,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.TEXT_MAIN,
     paddingVertical: 12,
+  },
+  dateText: {
+    flex: 1,
+    fontSize: 15,
+    color: COLORS.TEXT_MAIN,
+    textTransform: 'capitalize',
+  },
+  placeholderText: {
+    color: COLORS.TEXT_MUTED,
+    textTransform: 'none',
   },
   credentialsNotice: {
     flexDirection: 'row',
@@ -492,5 +582,39 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.3,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'flex-end',
+  },
+  iosPickerContainer: {
+    backgroundColor: COLORS.SURFACE,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 32,
+  },
+  iosPickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  iosPickerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.TEXT_MAIN,
+  },
+  iosDoneButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  iosDoneButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.PRIMARY,
   },
 });

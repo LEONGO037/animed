@@ -25,7 +25,8 @@
       "favicon": "./assets/animed_logo.jpg"
     },
     "plugins": [
-      "expo-status-bar"
+      "expo-status-bar",
+      "@react-native-community/datetimepicker"
     ]
   }
 }
