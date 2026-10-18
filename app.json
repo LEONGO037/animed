@@ -1,25 +1,28 @@
 {
   "expo": {
-    "name": "animed",
+    "name": "AniMed",
     "slug": "animed",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/animed_logo.jpg",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/animed_logo.jpg",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/animed_logo.jpg"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/animed_logo.jpg"
     },
     "plugins": [
       "expo-status-bar"

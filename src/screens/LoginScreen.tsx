@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
@@ -19,7 +20,7 @@ import { COLORS } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 
 const { width: screenWidth } = Dimensions.get('window');
-const WAVE_HEIGHT = 250;
+const WAVE_HEIGHT = 160;
 
 export const LoginScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -62,7 +63,7 @@ export const LoginScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          {/* Cabecera Tipo OLA (Wave Header con SVG) */}
+          {/* Cabecera Tipo OLA en paleta azul oficial */}
           <View style={[styles.waveContainer, { height: totalWaveHeight }]}>
             <Svg
               width={screenWidth}
@@ -72,45 +73,39 @@ export const LoginScreen: React.FC = () => {
             >
               <Defs>
                 <LinearGradient id="waveGradientMain" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <Stop offset="0%" stopColor="#14B8A6" />
+                  <Stop offset="0%" stopColor={COLORS.PRIMARY} />
                   <Stop offset="100%" stopColor={COLORS.PRIMARY_DARK} />
                 </LinearGradient>
                 <LinearGradient id="waveGradientSecondary" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <Stop offset="0%" stopColor="#2DD4BF" stopOpacity={0.4} />
+                  <Stop offset="0%" stopColor="#60A5FA" stopOpacity={0.35} />
                   <Stop offset="100%" stopColor={COLORS.PRIMARY} stopOpacity={0.2} />
                 </LinearGradient>
               </Defs>
 
-              {/* Ola secundaria suave de fondo para profundidad visual */}
+              {/* Ola secundaria suave de fondo */}
               <Path
-                d={`M0 0 L${screenWidth} 0 L${screenWidth} ${totalWaveHeight - 25} C${screenWidth * 0.72} ${totalWaveHeight + 25}, ${screenWidth * 0.3} ${totalWaveHeight - 65}, 0 ${totalWaveHeight - 15} Z`}
+                d={`M0 0 L${screenWidth} 0 L${screenWidth} ${totalWaveHeight - 20} C${screenWidth * 0.72} ${totalWaveHeight + 20}, ${screenWidth * 0.3} ${totalWaveHeight - 50}, 0 ${totalWaveHeight - 10} Z`}
                 fill="url(#waveGradientSecondary)"
               />
 
               {/* Ola principal frontal */}
               <Path
-                d={`M0 0 L${screenWidth} 0 L${screenWidth} ${totalWaveHeight - 55} C${screenWidth * 0.68} ${totalWaveHeight + 10}, ${screenWidth * 0.35} ${totalWaveHeight - 45}, 0 ${totalWaveHeight - 20} Z`}
+                d={`M0 0 L${screenWidth} 0 L${screenWidth} ${totalWaveHeight - 40} C${screenWidth * 0.68} ${totalWaveHeight + 10}, ${screenWidth * 0.35} ${totalWaveHeight - 35}, 0 ${totalWaveHeight - 15} Z`}
                 fill="url(#waveGradientMain)"
               />
             </Svg>
-
-            {/* Contenido dentro del Wave Hero */}
-            <View style={[styles.heroContent, { paddingTop: insets.top + 16 }]}>
-              <View style={styles.brandBadge}>
-                <Ionicons name="medical" size={26} color={COLORS.PRIMARY_DARK} />
-              </View>
-              <Text style={styles.brandTitle}>AniMed</Text>
-              <Text style={styles.brandSubtitle}>Control Tirzepatida & Seguimiento</Text>
-            </View>
           </View>
 
-          {/* Formulario Fluido y Orgánico (Sin bloques cuadrados pesados) */}
+          {/* Formulario Fluido */}
           <View style={styles.formContainer}>
-            <View style={styles.titleGroup}>
-              <Text style={styles.welcomeTitle}>Bienvenido</Text>
-              <Text style={styles.welcomeSubtitle}>
-                Inicia sesión con tu cuenta de Médico o Paciente
-              </Text>
+            {/* Logo Oficial AniMed Centrado */}
+            <View style={styles.logoWrapper}>
+              <Image
+                source={require('../../assets/animed_logo.jpg')}
+                style={styles.logoImage}
+                resizeMode="contain"
+                accessibilityLabel="Logo AniMed"
+              />
             </View>
 
             {/* Input Usuario */}
@@ -125,7 +120,7 @@ export const LoginScreen: React.FC = () => {
                 />
                 <TextInput
                   style={styles.input}
-                  placeholder="Ej. juanp o correo@animed.app"
+                  placeholder="Ej. marceloa o usuario@animed.app"
                   placeholderTextColor={COLORS.TEXT_MUTED}
                   value={username}
                   onChangeText={setUsername}
@@ -171,7 +166,7 @@ export const LoginScreen: React.FC = () => {
               </View>
             </View>
 
-            {/* Botón Principal Estilo Pill con Sombra Suave */}
+            {/* Botón Principal con color ACCENT (Naranja vibrante del logo) */}
             <TouchableOpacity
               style={[styles.primaryButton, isSubmitting && styles.buttonDisabled]}
               onPress={handleLogin}
@@ -184,7 +179,7 @@ export const LoginScreen: React.FC = () => {
                 <ActivityIndicator color={COLORS.SURFACE} />
               ) : (
                 <View style={styles.buttonContent}>
-                  <Text style={styles.primaryButtonText}>Ingresar al Sistema</Text>
+                  <Text style={styles.primaryButtonText}>Iniciar Sesión</Text>
                   <Ionicons name="arrow-forward" size={18} color={COLORS.SURFACE} style={styles.buttonArrow} />
                 </View>
               )}
@@ -219,56 +214,20 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
-  heroContent: {
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
-  brandBadge: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  brandTitle: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
-  },
-  brandSubtitle: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginTop: 2,
-    fontWeight: '500',
-    letterSpacing: 0.2,
-  },
   formContainer: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 8,
+    paddingTop: 4,
   },
-  titleGroup: {
-    marginBottom: 24,
-  },
-  welcomeTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: COLORS.TEXT_MAIN,
-    letterSpacing: -0.4,
-  },
-  welcomeSubtitle: {
-    fontSize: 14,
-    color: COLORS.TEXT_MUTED,
+  logoWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 4,
-    lineHeight: 20,
+    marginBottom: 20,
+  },
+  logoImage: {
+    width: '100%',
+    height: 120,
   },
   inputGroup: {
     marginBottom: 18,
@@ -310,15 +269,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   primaryButton: {
-    backgroundColor: COLORS.PRIMARY,
+    backgroundColor: COLORS.ACCENT,
     borderRadius: 26,
     minHeight: 52,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
-    shadowColor: COLORS.PRIMARY_DARK,
+    marginTop: 14,
+    shadowColor: COLORS.ACCENT,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 4,
   },

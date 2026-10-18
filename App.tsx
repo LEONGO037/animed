@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, ActivityIndicator, Image } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -15,10 +15,13 @@ const RootNavigator: React.FC = () => {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <View style={styles.logoBadge}>
-          <Text style={styles.logoBadgeText}>AM</Text>
-        </View>
-        <ActivityIndicator size="large" color={COLORS.PRIMARY} />
+        <Image
+          source={require('./assets/animed_logo.jpg')}
+          style={styles.loadingLogo}
+          resizeMode="contain"
+          accessibilityLabel="Logo AniMed"
+        />
+        <ActivityIndicator size="large" color={COLORS.ACCENT} />
         <Text style={styles.loadingText}>Cargando AniMed...</Text>
       </View>
     );
@@ -60,26 +63,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.BACKGROUND,
+    backgroundColor: COLORS.SURFACE,
+    paddingHorizontal: 24,
   },
-  logoBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: COLORS.PRIMARY,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: COLORS.PRIMARY_DARK,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  logoBadgeText: {
-    color: COLORS.SURFACE,
-    fontSize: 24,
-    fontWeight: '800',
+  loadingLogo: {
+    width: 200,
+    height: 120,
+    marginBottom: 24,
   },
   loadingText: {
     marginTop: 14,

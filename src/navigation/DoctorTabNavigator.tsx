@@ -17,7 +17,7 @@ export const DoctorTabNavigator: React.FC = () => {
       initialRouteName="Pacientes"
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: COLORS.PRIMARY,
+        tabBarActiveTintColor: COLORS.ACCENT,
         tabBarInactiveTintColor: COLORS.TEXT_MUTED,
         tabBarStyle: styles.tabBar,
         tabBarLabelStyle: styles.tabBarLabel,
