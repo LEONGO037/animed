@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerChangeEvent } from '@react-native-community/datetimepicker';
 import { COLORS } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import { supabase, createIsolatedAuthClient } from '../lib/supabase';
@@ -38,14 +38,18 @@ export const RegisterPatientScreen: React.FC<RegisterPatientScreenProps> = ({
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Manejador del cambio de fecha en el selector nativo
-  const handleDateChange = useCallback((event: DateTimePickerEvent, selectedDate?: Date) => {
+  // Manejador del cambio de fecha en el selector nativo (onValueChange y onDismiss)
+  const handleDateValueChange = useCallback((_event: DateTimePickerChangeEvent, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
       setShowDatePicker(false);
     }
-    if (event.type === 'set' && selectedDate) {
+    if (selectedDate) {
       setBirthDate(selectedDate);
     }
+  }, []);
+
+  const handleDateDismiss = useCallback(() => {
+    setShowDatePicker(false);
   }, []);
 
   // Formateador para visualización en español amigable
@@ -306,7 +310,8 @@ export const RegisterPatientScreen: React.FC<RegisterPatientScreenProps> = ({
                 mode="date"
                 display="default"
                 maximumDate={new Date()}
-                onChange={handleDateChange}
+                onValueChange={handleDateValueChange}
+                onDismiss={handleDateDismiss}
               />
             )}
 
@@ -337,7 +342,8 @@ export const RegisterPatientScreen: React.FC<RegisterPatientScreenProps> = ({
                       display="spinner"
                       maximumDate={new Date()}
                       textColor={COLORS.TEXT_MAIN}
-                      onChange={handleDateChange}
+                      onValueChange={handleDateValueChange}
+                      onDismiss={handleDateDismiss}
                       locale="es-ES"
                     />
                   </View>
