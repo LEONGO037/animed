@@ -166,7 +166,11 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
       );
     } catch (err: any) {
       console.error('Error al guardar inyección:', err);
-      Alert.alert('Error al Guardar', err.message || 'No se pudo guardar el registro en la base de datos.');
+      let errorMsg = err.message || 'No se pudo guardar el registro en la base de datos.';
+      if (err.message?.includes('row-level security')) {
+        errorMsg = 'Permiso denegado por políticas de seguridad (RLS) en Supabase. Asegúrate de ejecutar el script fix_injections_rls.sql en el SQL Editor de tu proyecto.';
+      }
+      Alert.alert('Error al Guardar', errorMsg);
     } finally {
       setIsSaving(false);
     }

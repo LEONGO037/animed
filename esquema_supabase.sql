@@ -61,17 +61,38 @@ ON public.profiles FOR UPDATE
 USING (auth.uid() = id);
 
 -- Políticas para Injections
--- Los pacientes ven y crean sus propios registros
+-- 1. Los pacientes ven y gestionan sus propios registros
 DROP POLICY IF EXISTS "Patients manage own injections" ON public.injections;
 CREATE POLICY "Patients manage own injections" 
 ON public.injections FOR ALL 
-USING (auth.uid() = patient_id);
+USING (auth.uid() = patient_id)
+WITH CHECK (auth.uid() = patient_id);
 
--- Los doctores pueden ver los registros de sus pacientes asignados
+-- 2. Los doctores pueden ver, registrar y gestionar inyecciones de sus pacientes
 DROP POLICY IF EXISTS "Doctors view patients injections" ON public.injections;
-CREATE POLICY "Doctors view patients injections" 
-ON public.injections FOR SELECT 
+DROP POLICY IF EXISTS "Doctors manage patients injections" ON public.injections;
+CREATE POLICY "Doctors manage patients injections" 
+ON public.injections FOR ALL 
 USING (
+    EXISTS (
+        SELECT 1 FROM public.profiles 
+        WHERE public.profiles.id = auth.uid() 
+        AND public.profiles.role = 'doctor'
+    )
+    OR
+    EXISTS (
+        SELECT 1 FROM public.profiles 
+        WHERE public.profiles.id = public.injections.patient_id 
+        AND public.profiles.assigned_doctor_id = auth.uid()
+    )
+)
+WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM public.profiles 
+        WHERE public.profiles.id = auth.uid() 
+        AND public.profiles.role = 'doctor'
+    )
+    OR
     EXISTS (
         SELECT 1 FROM public.profiles 
         WHERE public.profiles.id = public.injections.patient_id 
