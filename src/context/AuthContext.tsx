@@ -106,13 +106,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { error: 'Por favor ingresa usuario y contraseña.' };
     }
 
-    // Si el usuario no ingresó un correo con @, mapeamos o agregamos @animed.app
     let email = cleanInput;
+
+    // Si el usuario no ingresó un correo con @, buscamos su correo registrado por su nombre de usuario
     if (!cleanInput.includes('@')) {
-      if (cleanInput === 'marceloa') {
-        email = 'anibarro30@gmail.com';
-      } else {
-        email = `${cleanInput}@animed.app`;
+      try {
+        const { data: resolvedEmail } = await supabase.rpc('get_email_by_username', {
+          p_username: cleanInput,
+        });
+
+        if (resolvedEmail) {
+          email = resolvedEmail;
+        } else if (cleanInput === 'marceloa') {
+          email = 'anibarro30@gmail.com';
+        } else {
+          email = `${cleanInput}@animed.app`;
+        }
+      } catch (_rpcErr) {
+        if (cleanInput === 'marceloa') {
+          email = 'anibarro30@gmail.com';
+        } else {
+          email = `${cleanInput}@animed.app`;
+        }
       }
     }
 
@@ -123,6 +138,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
+        if (error.message.includes('Email not confirmed')) {
+          return {
+            error:
+              'La cuenta no ha sido confirmada en Supabase. Si eres el administrador, ejecuta el script fix_login_and_auth.sql en Supabase.',
+          };
+        }
+        if (error.message.includes('Invalid login credentials')) {
+          return {
+            error:
+              'Credenciales inválidas. Revisa tu usuario (o correo) y la contraseña ingresada.',
+          };
+        }
         return { error: error.message };
       }
 

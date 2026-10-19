@@ -42,10 +42,7 @@ export const LoginScreen: React.FC = () => {
     setIsSubmitting(false);
 
     if (result.error) {
-      Alert.alert(
-        'Error de Autenticación',
-        'Credenciales inválidas o error de conexión. Revisa tu usuario y contraseña.'
-      );
+      Alert.alert('Error de Autenticación', result.error);
     }
   }, [username, password, signIn]);
 

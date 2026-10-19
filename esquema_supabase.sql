@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
     role TEXT CHECK (role IN ('doctor', 'patient')) NOT NULL,
     username TEXT UNIQUE NOT NULL,
+    email TEXT,
     first_name TEXT NOT NULL,
     last_name_p TEXT NOT NULL,
     last_name_m TEXT,
