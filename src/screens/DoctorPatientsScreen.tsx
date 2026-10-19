@@ -17,12 +17,14 @@ import { COLORS } from '../theme/colors';
 import { Patient } from '../types';
 import { PatientCard, CARD_HEIGHT } from '../components/PatientCard';
 import { RegisterPatientScreen } from './RegisterPatientScreen';
+import { PatientDetailScreen } from './PatientDetailScreen';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 
 export const DoctorPatientsScreen: React.FC = () => {
   const { user, profile } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRegistering, setIsRegistering] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
@@ -71,11 +73,7 @@ export const DoctorPatientsScreen: React.FC = () => {
   );
 
   const handlePatientPress = useCallback((patient: Patient) => {
-    Alert.alert(
-      patient.name,
-      `Correo: ${patient.email}\nEstado: ${patient.statusText || 'En Tratamiento'}`,
-      [{ text: 'Cerrar', style: 'cancel' }]
-    );
+    setSelectedPatient(patient);
   }, []);
 
   const handleNewPatientPress = useCallback(() => {
@@ -157,6 +155,22 @@ export const DoctorPatientsScreen: React.FC = () => {
     ),
     [patients.length, profile, handleNewPatientPress]
   );
+
+  // Si se seleccionó un paciente, mostramos su expediente para registrar dosis y peso
+  if (selectedPatient) {
+    return (
+      <PatientDetailScreen
+        patient={selectedPatient}
+        onBack={() => {
+          setSelectedPatient(null);
+          fetchPatients(false);
+        }}
+        onRecordAdded={() => {
+          fetchPatients(false);
+        }}
+      />
+    );
+  }
 
   // Si está en modo de registro, renderizamos la pantalla modular de registro
   if (isRegistering) {
