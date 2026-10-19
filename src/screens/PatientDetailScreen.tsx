@@ -13,7 +13,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LineChart, BarChart } from 'react-native-chart-kit';
+import { LineChart } from 'react-native-chart-kit';
 import { COLORS } from '../theme/colors';
 import { CustomHeader } from '../components/CustomHeader';
 import { Patient, InjectionRecord } from '../types';
@@ -80,7 +80,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
     });
   }, [chronologicalHistory]);
 
-  // Datos para Gráfico de Barras (Evolución de Peso)
+  // Datos para Gráfico de Línea de Tendencia de Peso (igual a la vista del paciente)
   const weightChartData = useMemo(() => {
     if (chronologicalHistory.length === 0) return null;
     const weights = chronologicalHistory.map((item) => Number(item.weight_kg));
@@ -91,6 +91,8 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
       datasets: [
         {
           data: weights.length === 1 ? [weights[0], weights[0]] : weights,
+          color: (opacity = 1) => `rgba(240, 138, 36, ${opacity})`,
+          strokeWidth: 3,
         },
       ],
     };
@@ -331,13 +333,13 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
             )}
           </View>
 
-          {/* PARTE 2: Gráficos Clínicos (Gráfico de Barras con el Peso y Gráfico de Línea con la Dosis) */}
+          {/* PARTE 2: Gráficos Clínicos (Tendencia de Peso y Progresión de Dosis) */}
           <View style={styles.chartCard}>
             <View style={styles.sectionHeaderRow}>
-              <View style={[styles.sectionIconCircle, { backgroundColor: '#EFF6FF' }]}>
-                <Ionicons name="bar-chart" size={18} color={COLORS.PRIMARY} />
+              <View style={[styles.sectionIconCircle, { backgroundColor: '#FFF7ED' }]}>
+                <Ionicons name="trending-down" size={18} color={COLORS.ACCENT} />
               </View>
-              <Text style={styles.sectionTitle}>Evolución del Peso (kg)</Text>
+              <Text style={styles.sectionTitle}>Tendencia de Peso (kg)</Text>
             </View>
 
             {isLoadingHistory ? (
@@ -347,18 +349,18 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
               </View>
             ) : !weightChartData ? (
               <View style={styles.emptyChartBox}>
-                <Ionicons name="bar-chart-outline" size={28} color={COLORS.TEXT_MUTED} />
+                <Ionicons name="trending-down-outline" size={28} color={COLORS.TEXT_MUTED} />
                 <Text style={styles.emptyChartTitle}>Sin datos de peso</Text>
                 <Text style={styles.emptyChartSubtitle}>
-                  Registra la primera aplicación abajo para ver el gráfico de barras.
+                  Registra la primera aplicación abajo para ver la curva de peso.
                 </Text>
               </View>
             ) : (
               <View style={styles.chartWrapper}>
-                <BarChart
+                <LineChart
                   data={weightChartData}
                   width={screenWidth - 68}
-                  height={200}
+                  height={190}
                   yAxisSuffix=" kg"
                   yAxisLabel=""
                   chartConfig={{
@@ -368,15 +370,18 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                     decimalPlaces: 1,
                     color: (opacity = 1) => `rgba(240, 138, 36, ${opacity})`,
                     labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
-                    barPercentage: 0.6,
+                    propsForDots: {
+                      r: '5',
+                      strokeWidth: '2',
+                      stroke: '#C2620A',
+                    },
                     propsForBackgroundLines: {
                       strokeDasharray: '',
                       stroke: '#F3F4F6',
                     },
                   }}
+                  bezier
                   style={styles.chartStyle}
-                  showValuesOnTopOfBars={true}
-                  fromZero={false}
                 />
               </View>
             )}
