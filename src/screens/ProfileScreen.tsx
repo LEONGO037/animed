@@ -1,12 +1,14 @@
-import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
+import { ChangePasswordModal } from '../components/ChangePasswordModal';
 
 export const ProfileScreen: React.FC = () => {
   const { profile, signOut } = useAuth();
+  const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
 
   const handleLogout = () => {
     Alert.alert('Cerrar Sesión', '¿Estás seguro de que deseas salir del panel médico?', [
@@ -17,7 +19,10 @@ export const ProfileScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.avatarLarge}>
           <Ionicons name="medical" size={44} color={COLORS.PRIMARY_DARK} />
         </View>
@@ -50,6 +55,26 @@ export const ProfileScreen: React.FC = () => {
           </View>
         </View>
 
+        {/* Acciones de Seguridad y Configuración */}
+        <View style={styles.actionsCard}>
+          <Text style={styles.cardHeader}>Seguridad de la Cuenta</Text>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => setIsPasswordModalVisible(true)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Cambiar contraseña"
+          >
+            <View style={styles.actionLeft}>
+              <View style={styles.actionIconCircle}>
+                <Ionicons name="key-outline" size={18} color={COLORS.PRIMARY} />
+              </View>
+              <Text style={styles.actionButtonText}>Cambiar Contraseña</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={COLORS.TEXT_MUTED} />
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity
           style={styles.logoutButton}
           onPress={handleLogout}
@@ -60,7 +85,13 @@ export const ProfileScreen: React.FC = () => {
           <Ionicons name="log-out-outline" size={20} color="#DC2626" style={styles.logoutIcon} />
           <Text style={styles.logoutText}>Cerrar Sesión</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
+
+      {/* Modal para Cambiar Contraseña */}
+      <ChangePasswordModal
+        visible={isPasswordModalVisible}
+        onClose={() => setIsPasswordModalVisible(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -70,10 +101,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.BACKGROUND,
   },
-  container: {
-    flex: 1,
+  scrollContent: {
     paddingHorizontal: 24,
     paddingTop: 32,
+    paddingBottom: 40,
     alignItems: 'center',
   },
   avatarLarge: {
@@ -145,6 +176,44 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: COLORS.BADGE_TEXT,
+  },
+  actionsCard: {
+    width: '100%',
+    backgroundColor: COLORS.SURFACE,
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+  },
+  actionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.TEXT_MAIN,
   },
   logoutButton: {
     width: '100%',
