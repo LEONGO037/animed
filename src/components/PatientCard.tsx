@@ -32,7 +32,7 @@ export const PatientCard: React.FC<PatientCardProps> = React.memo(({ patient, on
         <View style={styles.badgeRow}>
           <View style={styles.badge}>
             <Ionicons name="ribbon" size={13} color={COLORS.BADGE_TEXT} style={styles.badgeIcon} />
-            <Text style={styles.badgeText}>{patient.statusText || 'Progress'}</Text>
+            <Text style={styles.badgeText}>{patient.statusText || 'En Tratamiento'}</Text>
           </View>
         </View>
       </View>

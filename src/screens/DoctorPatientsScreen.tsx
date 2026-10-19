@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,9 +7,12 @@ import {
   TouchableOpacity,
   Alert,
   Image,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { COLORS } from '../theme/colors';
 import { Patient } from '../types';
 import { PatientCard, CARD_HEIGHT } from '../components/PatientCard';
@@ -17,51 +20,23 @@ import { RegisterPatientScreen } from './RegisterPatientScreen';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 
-const MOCK_PATIENTS: Patient[] = [
-  {
-    id: 'p-1',
-    name: 'Juan Pérez',
-    email: 'juanp@animed.app',
-    statusText: 'Progress',
-    lastDoseMg: 2.5,
-    weightKg: 88.5,
-  },
-  {
-    id: 'p-2',
-    name: 'María Gómez',
-    email: 'mariag@animed.app',
-    statusText: 'Progress',
-    lastDoseMg: 5.0,
-    weightKg: 74.2,
-  },
-  {
-    id: 'p-3',
-    name: 'María Monarez',
-    email: 'mariam@animed.app',
-    statusText: 'Progress',
-    lastDoseMg: 2.5,
-    weightKg: 69.8,
-  },
-  {
-    id: 'p-4',
-    name: 'María Pérez',
-    email: 'mariap@animed.app',
-    statusText: 'Progress',
-    lastDoseMg: 7.5,
-    weightKg: 82.0,
-  },
-];
-
 export const DoctorPatientsScreen: React.FC = () => {
   const { user, profile } = useAuth();
-  const [patients, setPatients] = useState<Patient[]>(MOCK_PATIENTS);
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isRegistering, setIsRegistering] = useState<boolean>(false);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
-  const fetchPatients = useCallback(async () => {
+  // Consulta de pacientes reales vinculados en Supabase
+  const fetchPatients = useCallback(async (isRefresh = false) => {
     if (!user?.id) return;
     try {
-      setIsRefreshing(true);
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
+
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -69,30 +44,36 @@ export const DoctorPatientsScreen: React.FC = () => {
         .eq('assigned_doctor_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (!error && data && data.length > 0) {
+      if (error) {
+        console.warn('Error al cargar pacientes de Supabase:', error.message);
+      } else if (data) {
         const mappedPatients: Patient[] = data.map((p) => ({
           id: p.id,
           name: `${p.first_name} ${p.last_name_p} ${p.last_name_m || ''}`.trim(),
           email: p.email || `${p.username}@animed.app`,
-          statusText: 'Progress',
+          statusText: 'En Tratamiento',
         }));
         setPatients(mappedPatients);
       }
     } catch (err: any) {
       console.warn('Error al cargar pacientes:', err.message);
     } finally {
+      setIsLoading(false);
       setIsRefreshing(false);
     }
   }, [user?.id]);
 
-  useEffect(() => {
-    fetchPatients();
-  }, [fetchPatients]);
+  // Actualización automática al enfocar la pantalla
+  useFocusEffect(
+    useCallback(() => {
+      fetchPatients(false);
+    }, [fetchPatients])
+  );
 
   const handlePatientPress = useCallback((patient: Patient) => {
     Alert.alert(
       patient.name,
-      `Correo: ${patient.email}\nDosis actual: ${patient.lastDoseMg ?? 2.5} mg\nPeso: ${patient.weightKg ?? 80} kg`,
+      `Correo: ${patient.email}\nEstado: ${patient.statusText || 'En Tratamiento'}`,
       [{ text: 'Cerrar', style: 'cancel' }]
     );
   }, []);
@@ -120,7 +101,7 @@ export const DoctorPatientsScreen: React.FC = () => {
     []
   );
 
-  // Memorización de la cabecera para evitar re-computaciones durante el scroll
+  // Memorización de la cabecera
   const listHeaderComponent = useMemo(
     () => (
       <View style={styles.headerWrapper}>
@@ -139,11 +120,11 @@ export const DoctorPatientsScreen: React.FC = () => {
             style={styles.profileBadge}
             activeOpacity={0.8}
             accessibilityRole="button"
-            accessibilityLabel="Perfil del doctor"
+            accessibilityLabel="Perfil del médico"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Text style={styles.profileText}>
-              Dr. {profile?.last_name_p ? `${profile.first_name} ${profile.last_name_p}` : 'Profile'}
+              Dr. {profile?.last_name_p ? `${profile.first_name} ${profile.last_name_p}` : 'Médico'}
             </Text>
             <View style={styles.avatarContainer}>
               <Ionicons name="person" size={16} color={COLORS.PRIMARY_DARK} />
@@ -151,8 +132,8 @@ export const DoctorPatientsScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Título de la sección */}
-        <Text style={styles.sectionTitle}>Patient List</Text>
+        {/* Título de la sección en Español */}
+        <Text style={styles.sectionTitle}>Lista de Pacientes</Text>
 
         {/* Tarjeta de Resumen (Banner Medical Tech) */}
         <View style={styles.summaryCard}>
@@ -183,7 +164,7 @@ export const DoctorPatientsScreen: React.FC = () => {
       <RegisterPatientScreen
         onSuccess={() => {
           setIsRegistering(false);
-          fetchPatients();
+          fetchPatients(false);
         }}
         onCancel={() => setIsRegistering(false)}
       />
@@ -204,8 +185,32 @@ export const DoctorPatientsScreen: React.FC = () => {
         removeClippedSubviews={true}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
-        refreshing={isRefreshing}
-        onRefresh={fetchPatients}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => fetchPatients(true)}
+            colors={[COLORS.PRIMARY]}
+            tintColor={COLORS.PRIMARY}
+          />
+        }
+        ListEmptyComponent={
+          isLoading ? (
+            <View style={styles.emptyContainer}>
+              <ActivityIndicator size="large" color={COLORS.PRIMARY} />
+              <Text style={styles.loadingText}>Cargando lista de pacientes...</Text>
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIconCircle}>
+                <Ionicons name="people-outline" size={36} color={COLORS.TEXT_MUTED} />
+              </View>
+              <Text style={styles.emptyTitle}>No tienes pacientes registrados</Text>
+              <Text style={styles.emptySubtitle}>
+                Presiona el botón "+ Nuevo Paciente" para dar de alta a tu primer paciente y comenzar el seguimiento de Tirzepatida.
+              </Text>
+            </View>
+          )
+        }
       />
     </SafeAreaView>
   );
@@ -325,5 +330,43 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.PRIMARY_DARK,
     lineHeight: 15,
+  },
+  emptyContainer: {
+    backgroundColor: COLORS.SURFACE,
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: COLORS.BORDER,
+  },
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: COLORS.TEXT_MAIN,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: COLORS.TEXT_MUTED,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: COLORS.TEXT_MUTED,
+    fontWeight: '500',
   },
 });
