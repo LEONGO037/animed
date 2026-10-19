@@ -108,21 +108,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     let email = cleanInput;
 
-    // Si el usuario no ingresó un correo con @, buscamos su correo registrado por su nombre de usuario
+    // Si el usuario no ingresó un correo con @, resolvemos su correo según el nombre de usuario
     if (!cleanInput.includes('@')) {
       try {
-        const { data: resolvedEmail } = await supabase.rpc('get_email_by_username', {
-          p_username: cleanInput,
-        });
+        console.log('[Auth] Buscando correo para usuario:', cleanInput);
 
-        if (resolvedEmail) {
-          email = resolvedEmail;
-        } else if (cleanInput === 'marceloa') {
-          email = 'anibarro30@gmail.com';
+        // Intento 1: Consulta directa a profiles por username
+        const { data: profileMatch } = await supabase
+          .from('profiles')
+          .select('email')
+          .ilike('username', cleanInput)
+          .maybeSingle();
+
+        if (profileMatch?.email) {
+          console.log('[Auth] Correo encontrado en profiles:', profileMatch.email);
+          email = profileMatch.email;
         } else {
-          email = `${cleanInput}@animed.app`;
+          // Intento 2: RPC get_email_by_username
+          const { data: rpcEmail, error: rpcError } = await supabase.rpc('get_email_by_username', {
+            p_username: cleanInput,
+          });
+
+          if (rpcEmail) {
+            console.log('[Auth] Correo resuelto por RPC:', rpcEmail);
+            email = rpcEmail;
+          } else {
+            if (rpcError) {
+              console.warn('[Auth] Error en RPC get_email_by_username:', rpcError.message);
+            }
+            if (cleanInput === 'marceloa') {
+              email = 'anibarro30@gmail.com';
+            } else {
+              email = `${cleanInput}@animed.app`;
+            }
+          }
         }
-      } catch (_rpcErr) {
+      } catch (lookupErr: any) {
+        console.warn('[Auth] Excepción al resolver correo:', lookupErr.message);
         if (cleanInput === 'marceloa') {
           email = 'anibarro30@gmail.com';
         } else {
@@ -131,6 +153,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
+    console.log('[Auth] Intentando signIn con email:', email);
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -138,6 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
+        console.warn('[Auth] Error devuelto por Supabase Auth:', error.message);
         if (error.message.includes('Email not confirmed')) {
           return {
             error:
@@ -154,11 +179,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data.user) {
+        console.log('[Auth] Sesión iniciada con éxito para usuario:', data.user.id);
         await fetchProfile(data.user.id, data.user);
       }
 
       return {};
     } catch (err: any) {
+      console.warn('[Auth] Error inesperado en signIn:', err.message);
       return { error: err.message || 'Error inesperado al conectar.' };
     }
   }, [fetchProfile]);
