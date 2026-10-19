@@ -5,7 +5,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
 import { RootTabParamList } from '../types';
 import { DoctorPatientsScreen } from '../screens/DoctorPatientsScreen';
-import { DashboardScreen } from '../screens/DashboardScreen';
 import { DoctorsScreen } from '../screens/DoctorsScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 
@@ -30,9 +29,6 @@ export const DoctorTabNavigator: React.FC = () => {
             case 'Pacientes':
               iconName = focused ? 'people' : 'people-outline';
               break;
-            case 'Dashboard':
-              iconName = focused ? 'bar-chart' : 'bar-chart-outline';
-              break;
             case 'Doctores':
               iconName = focused ? 'medkit' : 'medkit-outline';
               break;
@@ -53,14 +49,6 @@ export const DoctorTabNavigator: React.FC = () => {
         options={{
           tabBarLabel: 'Pacientes',
           tabBarAccessibilityLabel: 'Pestaña de Pacientes',
-        }}
-      />
-      <Tab.Screen
-        name="Dashboard"
-        component={DashboardScreen}
-        options={{
-          tabBarLabel: 'Dashboard',
-          tabBarAccessibilityLabel: 'Pestaña de Dashboard',
         }}
       />
       <Tab.Screen

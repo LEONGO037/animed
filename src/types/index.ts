@@ -45,7 +45,6 @@ export type DoctorsStackParamList = {
 
 export type RootTabParamList = {
   Pacientes: undefined;
-  Dashboard: undefined;
   Doctores: undefined;
   'Mi Perfil': undefined;
 };

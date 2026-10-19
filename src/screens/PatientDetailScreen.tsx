@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,12 +10,16 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LineChart, BarChart } from 'react-native-chart-kit';
 import { COLORS } from '../theme/colors';
 import { CustomHeader } from '../components/CustomHeader';
 import { Patient, InjectionRecord } from '../types';
 import { supabase } from '../lib/supabase';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 interface PatientDetailScreenProps {
   patient: Patient;
@@ -61,6 +65,54 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
       return next;
     });
   }, []);
+
+  // Historial cronológico ordenado de más antiguo a más reciente para las gráficas
+  const chronologicalHistory = useMemo(() => {
+    return [...history].reverse().slice(-6);
+  }, [history]);
+
+  // Etiquetas de fecha abreviadas para el eje X
+  const chartLabels = useMemo(() => {
+    if (chronologicalHistory.length === 0) return [];
+    return chronologicalHistory.map((item) => {
+      const d = new Date(item.injection_date);
+      return `${d.getDate()}/${d.getMonth() + 1}`;
+    });
+  }, [chronologicalHistory]);
+
+  // Datos para Gráfico de Barras (Evolución de Peso)
+  const weightChartData = useMemo(() => {
+    if (chronologicalHistory.length === 0) return null;
+    const weights = chronologicalHistory.map((item) => Number(item.weight_kg));
+    const labels = chartLabels;
+
+    return {
+      labels: labels.length === 1 ? [labels[0], labels[0]] : labels,
+      datasets: [
+        {
+          data: weights.length === 1 ? [weights[0], weights[0]] : weights,
+        },
+      ],
+    };
+  }, [chronologicalHistory, chartLabels]);
+
+  // Datos para Gráfico de Línea (Progresión de Dosis)
+  const doseChartData = useMemo(() => {
+    if (chronologicalHistory.length === 0) return null;
+    const doses = chronologicalHistory.map((item) => Number(item.dose_mg));
+    const labels = chartLabels;
+
+    return {
+      labels: labels.length === 1 ? [labels[0], labels[0]] : labels,
+      datasets: [
+        {
+          data: doses.length === 1 ? [doses[0], doses[0]] : doses,
+          color: (opacity = 1) => `rgba(41, 115, 180, ${opacity})`,
+          strokeWidth: 3,
+        },
+      ],
+    };
+  }, [chronologicalHistory, chartLabels]);
 
   // Consultar historial del paciente en Supabase
   const fetchPatientInjections = useCallback(async () => {
@@ -279,7 +331,111 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
             )}
           </View>
 
-          {/* PARTE 2: Registrar Nuevo Peso y Dosis */}
+          {/* PARTE 2: Gráficos Clínicos (Gráfico de Barras con el Peso y Gráfico de Línea con la Dosis) */}
+          <View style={styles.chartCard}>
+            <View style={styles.sectionHeaderRow}>
+              <View style={[styles.sectionIconCircle, { backgroundColor: '#EFF6FF' }]}>
+                <Ionicons name="bar-chart" size={18} color={COLORS.PRIMARY} />
+              </View>
+              <Text style={styles.sectionTitle}>Evolución del Peso (kg)</Text>
+            </View>
+
+            {isLoadingHistory ? (
+              <View style={styles.loadingBox}>
+                <ActivityIndicator size="small" color={COLORS.PRIMARY} />
+                <Text style={styles.loadingBoxText}>Cargando gráfico de peso...</Text>
+              </View>
+            ) : !weightChartData ? (
+              <View style={styles.emptyChartBox}>
+                <Ionicons name="bar-chart-outline" size={28} color={COLORS.TEXT_MUTED} />
+                <Text style={styles.emptyChartTitle}>Sin datos de peso</Text>
+                <Text style={styles.emptyChartSubtitle}>
+                  Registra la primera aplicación abajo para ver el gráfico de barras.
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.chartWrapper}>
+                <BarChart
+                  data={weightChartData}
+                  width={screenWidth - 68}
+                  height={200}
+                  yAxisSuffix=" kg"
+                  yAxisLabel=""
+                  chartConfig={{
+                    backgroundColor: COLORS.SURFACE,
+                    backgroundGradientFrom: COLORS.SURFACE,
+                    backgroundGradientTo: COLORS.SURFACE,
+                    decimalPlaces: 1,
+                    color: (opacity = 1) => `rgba(240, 138, 36, ${opacity})`,
+                    labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
+                    barPercentage: 0.6,
+                    propsForBackgroundLines: {
+                      strokeDasharray: '',
+                      stroke: '#F3F4F6',
+                    },
+                  }}
+                  style={styles.chartStyle}
+                  showValuesOnTopOfBars={true}
+                  fromZero={false}
+                />
+              </View>
+            )}
+          </View>
+
+          <View style={styles.chartCard}>
+            <View style={styles.sectionHeaderRow}>
+              <View style={[styles.sectionIconCircle, { backgroundColor: '#EFF6FF' }]}>
+                <Ionicons name="trending-up" size={18} color={COLORS.PRIMARY} />
+              </View>
+              <Text style={styles.sectionTitle}>Progresión de Dosis (mg)</Text>
+            </View>
+
+            {isLoadingHistory ? (
+              <View style={styles.loadingBox}>
+                <ActivityIndicator size="small" color={COLORS.PRIMARY} />
+                <Text style={styles.loadingBoxText}>Cargando gráfico de dosis...</Text>
+              </View>
+            ) : !doseChartData ? (
+              <View style={styles.emptyChartBox}>
+                <Ionicons name="trending-up-outline" size={28} color={COLORS.TEXT_MUTED} />
+                <Text style={styles.emptyChartTitle}>Sin datos de dosis</Text>
+                <Text style={styles.emptyChartSubtitle}>
+                  Registra la primera aplicación abajo para ver el gráfico de línea.
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.chartWrapper}>
+                <LineChart
+                  data={doseChartData}
+                  width={screenWidth - 68}
+                  height={190}
+                  yAxisSuffix=" mg"
+                  yAxisLabel=""
+                  chartConfig={{
+                    backgroundColor: COLORS.SURFACE,
+                    backgroundGradientFrom: COLORS.SURFACE,
+                    backgroundGradientTo: COLORS.SURFACE,
+                    decimalPlaces: 1,
+                    color: (opacity = 1) => `rgba(41, 115, 180, ${opacity})`,
+                    labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
+                    propsForDots: {
+                      r: '5',
+                      strokeWidth: '2',
+                      stroke: COLORS.PRIMARY_DARK,
+                    },
+                    propsForBackgroundLines: {
+                      strokeDasharray: '',
+                      stroke: '#F3F4F6',
+                    },
+                  }}
+                  bezier
+                  style={styles.chartStyle}
+                />
+              </View>
+            )}
+          </View>
+
+          {/* PARTE 3: Registrar Nuevo Peso y Dosis */}
           <View style={styles.formCard}>
             <View style={styles.sectionHeaderRow}>
               <View style={[styles.sectionIconCircle, { backgroundColor: '#FFF7ED' }]}>
@@ -881,5 +1037,47 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.TEXT_MUTED,
     marginTop: 2,
+  },
+  chartCard: {
+    backgroundColor: COLORS.SURFACE,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.BORDER,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  chartWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    borderRadius: 14,
+  },
+  chartStyle: {
+    borderRadius: 14,
+    marginVertical: 4,
+  },
+  emptyChartBox: {
+    paddingVertical: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyChartTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.TEXT_MAIN,
+    marginTop: 8,
+  },
+  emptyChartSubtitle: {
+    fontSize: 12,
+    color: COLORS.TEXT_MUTED,
+    textAlign: 'center',
+    marginTop: 4,
+    paddingHorizontal: 16,
+    lineHeight: 16,
   },
 });
