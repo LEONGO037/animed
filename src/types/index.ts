@@ -30,6 +30,19 @@ export interface InjectionRecord {
   created_at?: string;
 }
 
+export interface Doctor {
+  id: string;
+  name: string;
+  email: string;
+  username: string;
+  created_at?: string;
+}
+
+export type DoctorsStackParamList = {
+  DoctorsList: undefined;
+  RegisterDoctor: undefined;
+};
+
 export type RootTabParamList = {
   Pacientes: undefined;
   Dashboard: undefined;
